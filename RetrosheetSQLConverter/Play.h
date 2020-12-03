@@ -15,22 +15,27 @@ public:
 	std::string RawPlay;
 	std::string Outcome;
 	std::string OutcomeType;
+	std::string Fielder;
 	std::string Location;
 	std::string Trajectory;
 
 	std::vector<int> Fielders;
+	std::vector<char> RunnersOut;
 
-	std::string PartOne;
-	std::string PartTwo;
+	std::string PlayCode;
+	std::string BaserunnerCode;
 
 	std::string getPlay();
 
+	void SplitPlayCode();
 	void ProcessPlay();
-	void ProcessPlayOne(std::string PartOne);
-	void ProcessPlayTwo(std::string PartTwo);
-	void ProcessHit(std::string HitCode);
+	void ProcessBaserunners(std::string PartTwo);
+
+	void ProcessHit();
+	void ProcessOut();
+
 	std::string GetTrajectory(char BallCode);
 	std::string GetFielder(int FielderCode);
-	std::string GetLocation(std::string LocationCode, char trajectory);
+	std::string GetLocation(std::string LocationCode);
 };
 
