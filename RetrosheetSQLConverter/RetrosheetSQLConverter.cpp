@@ -57,26 +57,30 @@ int main()
     //Print some game info for Debug
     for (int i = 0; i < Games.size(); i++)
     {
-        if (i == 0)
+        if (i == i)
         {
-            std::cout << "Game: " << i + 1 << ": " << Games[i].Teams[1].Abbreviation << " @ " << Games[i].Teams[0].Abbreviation << " on " << Games[i].GameDate << "\n";
-            std::cout << "WP: " << Games[i].WinningPitcherID << "\n";
-            std::cout << "LP: " << Games[i].LosingPitcherID << "\n";
-            std::cout << "Save: " << Games[i].SavePitcherID << "\n\n";
+            //std::cout << "Game: " << i + 1 << ": " << Games[i].Teams[1].Abbreviation << " @ " << Games[i].Teams[0].Abbreviation << " on " << Games[i].GameDate << "\n";
+            //std::cout << "WP: " << Games[i].WinningPitcherID << "\n";
+            //std::cout << "LP: " << Games[i].LosingPitcherID << "\n";
+            //std::cout << "Save: " << Games[i].SavePitcherID << "\n\n";
 
-            for (auto Team : Games[i].Teams)
-            {
-                for (auto Player : Team.Roster)
-                {
-                    std::cout << Player.second.FirstName << " " << Player.second.LastName << "\n";
-                }
-                std::cout << "\n";
-            }
-            std::cout << "\n";
+            //for (auto Team : Games[i].Teams)
+            //{
+            //    for (auto Player : Team.Roster)
+            //    {
+            //        std::cout << Player.second.FirstName << " " << Player.second.LastName << "\n";
+            //    }
+            //    std::cout << "\n";
+            //}
 
             for (auto Play : Games[i].Plays)
             {
-                std::cout << Games[i].Teams[Play.isBottomInning].Roster[Play.BatterID].LastName << ": " << Play.getPlay() << " || " << Play.RawPlay << "\n";
+                //std::string PlayText = Play.getPlay();
+                //if (PlayText != "")
+                if (Play.PlayCode != "")
+                {
+                    std::cout << i+1 << ": " << Games[i].Teams[Play.isBottomInning].Roster[Play.BatterID].LastName << ": " << Play.PlayCode << " | " << Play.RawPlay << "\n";
+                }
             }
             //for (auto Line : Games[i].RawData)
             //{
