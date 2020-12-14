@@ -24,8 +24,6 @@ Play::~Play()
 }
 
 
-
-
 std::string Play::getPlay()
 {
 	if (OutcomeType == "Hit") { return ""; }//"Hits a " + Outcome + " on a " + Trajectory + " fielded by the " + Fielder + " | " + getBaserunnerText(); }
@@ -44,6 +42,7 @@ std::string Play::getPlay()
 	//else { return Outcome + " - " + PlayCode + " | " + BaserunnerCode + " || " + RawPlay + "\n"; }
 }
 
+
 std::string Play::getBaserunnerText()
 {
 	std::string Text;
@@ -56,6 +55,7 @@ std::string Play::getBaserunnerText()
 	}
 	return Text;
 }
+
 
 void Play::SplitPlayCode()
 {
@@ -75,258 +75,199 @@ void Play::SplitPlayCode()
 }
 
 
-//Outcome Part 1 (before /) | Generally denotes a hit or a fielder who makes the out
 void Play::ProcessPlay()
 {
-	if (std::isdigit(PlayCode[0])) { ProcessOut(); }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "SB") { ProcessSB(); }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "BK") { Outcome = "Balk"; PlayCode = PlayCode.substr(2); }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "CS") { Outcome = "Caught Stealing"; }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "DI") { Outcome = "Defensive Indifference"; PlayCode = PlayCode.substr(2); }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "OA") { Outcome = "Other Advance"; }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "PB") { Outcome = "Passed Ball"; }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "WP") { Outcome = "Wild Pitch"; PlayCode = PlayCode.substr(2); }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "PO") { Outcome = "Pickoff"; }
-	else if (PlayCode[0] == 'C') { Outcome = "Catcher Interference"; }
-	else if (PlayCode[0] == 'S' || PlayCode[0] == 'D' || PlayCode[0] == 'T') { ProcessHit(); }
-	else if (PlayCode[0] == 'E') { ProcessE(); }
-	else if (PlayCode.size() >= 3 && PlayCode.substr(0, 3) == "DGR") { Outcome = "Ground Rule Double"; }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "FC") { Outcome = "Fielder's Choice"; }
-	else if (PlayCode.size() >= 3 && PlayCode.substr(0, 3) == "FLE") { Outcome = "Foul Fly Error"; }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "HP") { Outcome = "Hit by pitch"; PlayCode = PlayCode.substr(2); }
-	else if (PlayCode[0] == 'K') { ProcessK(); }
-	else if (PlayCode.size() >= 2 && PlayCode.substr(0, 2) == "NP") { Outcome = "No play"; PlayCode = PlayCode.substr(2); }
-	else if (PlayCode[0] == 'I') { Outcome = "Intentional Walk"; PlayCode = PlayCode.substr(2); }
-	else if (PlayCode[0] == 'W') { ProcessW(); }
-	else if (PlayCode[0] == 'H') { ProcessHR(); }
+	for(int i = 0; i < PlayCode.size(); i++)
+	{
+		if (PlayType == "")
+		{
+			if (isdigit(PlayCode[i])) { ProcessFieldOut(); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "DI") { PlayType = "defensiveInterference"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "NP") { PlayType = "noPlay"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "IW") { PlayType = "intentionalWalk"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "HP") { PlayType = "hitByPitch"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "WP") { PlayType = "wildPitch"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "FC") { PlayType = "fieldersChoice"; ReducePlayCode(2); AddFielders(); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "PB") { PlayType = "passedBall"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "BK") { PlayType = "balk"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "PO") { ProcessPO(true); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "OA") { PlayType = "otherAdvance"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "HR") { PlayType = "homerun"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "SB") { ProcessSB(true); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "CS") { ProcessCS(true); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "DGR") { PlayType = "groundRuleDouble"; ReducePlayCode(3); GetLocation(); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "FLE") { GetTrajectory(); ReducePlayCode(1); ProcessError(true); }
+			else if (PlayCode[0] == 'K' || PlayCode[0] == 'C') { PlayType = "strikeout"; ReducePlayCode(1); }
+			else if (PlayCode[0] == 'S' || PlayCode[0] == 'D' || PlayCode[0] == 'T') { ProcessHit(); }
+			else if (PlayCode[0] == 'W') { PlayType = "walk"; ReducePlayCode(1); }
+			else if (PlayCode[0] == 'E') { ProcessError(true); }
+			else { PlayType = "Other"; }
+			i = -1;
+		}
+		else if (PlayCode[0] == '+' || PlayCode[0] == '-' || PlayCode[0] == '!' || PlayCode[0] == ';') { ReducePlayCode(1); i = -1; }
+		else if (PlayCode[0] == '/')
+		{
+			ReducePlayCode(1);
+			if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "FO") { ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "SH") { PlayType = "sacrificeHit"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "AP") { ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "FL") { ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "BR") { ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "SF") { PlayType = "sacrificeFly"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "BG" || PlayCode.substr(0, 2) == "BL" || PlayCode.substr(0, 2) == "BP" || PlayCode.substr(0, 2) == "BF") { ReducePlayCode(1); GetTrajectory(); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "IF") { PlayType = "infieldFly"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "FDP" || PlayCode.substr(0, 3) == "LDP" || PlayCode.substr(0, 3) == "GDP") { PlayType = "doublePlay"; ReducePlayCode(3); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "FTP" || PlayCode.substr(0, 3) == "LTP" || PlayCode.substr(0, 3) == "GTP") { PlayType = "triplePlay"; ReducePlayCode(3); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "DP") { PlayType = "doublePlay"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "TP") { PlayType = "triplePlay"; ReducePlayCode(2); }
+			else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "TH") { ReducePlayCode(2); if (isdigit(PlayCode[0])) { ReducePlayCode(1); } }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "UREV") { ReducePlayCode(4); }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "BOOT") { PlayType = "batterOutOfTurn"; ReducePlayCode(4); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "OBS") { PlayType = "obstruction"; ReducePlayCode(3); }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "BINT") { PlayType = "batterInterference"; ReducePlayCode(4); }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "FINT") { PlayType = "fanInterference"; ReducePlayCode(4); }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "UINT") { PlayType = "umpireInterference"; ReducePlayCode(4); }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "RINT") { PlayType = "runnerInterference"; ReducePlayCode(4); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "INT") { PlayType = "interference"; ReducePlayCode(3); }
+			else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "PASS") { ReducePlayCode(4); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "NDP") { ReducePlayCode(3); }
+			else if (PlayCode[0] == 'C') { ReducePlayCode(1); }
+			else if (PlayCode[0] == 'R') { ReducePlayCode(2); }
+			else if (PlayCode[0] == 'E') { ProcessError(false); }
+			else if (Trajectory == "" && PlayCode[0] == 'G' || PlayCode[0] == 'F' || PlayCode[0] == 'L' || PlayCode[0] == 'P')
+			{
+				GetTrajectory();
+			}
+			else if (isdigit(PlayCode[0])) { GetLocation(); }
+			i = -1;
+		}
+		else if (PlayCode[0] == '(')
+		{
+			if (PlayCode.size() > 1 && PlayCode.substr(1, 2) == "UR") { ReducePlayCode(4); }
+			else if (PlayCode.size() > 2 && PlayCode.substr(1, 3) == "TUR") { ReducePlayCode(5); }
+			i = -1;
+		}
+		else if (isdigit(PlayCode[0])) { GetLocation(); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "SB") { ProcessSB(false); i = -1;}
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "CS") { ProcessCS(false); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "WP") { ReducePlayCode(2); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "PB") { ReducePlayCode(2); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "OA") { ReducePlayCode(2); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "DI") { ReducePlayCode(2); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "PO") { ProcessPO(false); i = -1; }
+		else if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "TUR") { ProcessSB(false); i = -1; }
+		else if (PlayCode.size() > 1 && PlayCode.substr(0, 2) == "DP") { PlayType = "doublePlay"; ReducePlayCode(2); }
+		else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "MREV") { ReducePlayCode(4); i = -1;}
+		else if (PlayCode[0] == 'E') { ProcessError(false); i = -1; }
+		else if (PlayCode[0] == '!') { ReducePlayCode(1); i = -1; }
+	}
 }
 
 
 void Play::ProcessHit()
 {
-	OutcomeType = "Hit";
-
-	while (PlayCode.size() > 0)
-	{
-		if (PlayCode[0] == 'S') { Outcome = "Single"; PlayCode = PlayCode.substr(1); }
-		else if (PlayCode[0] == 'D') 
-		{ 
-			if(PlayCode.size() > 2 && PlayCode.substr(0, 3) == "DGR") { Outcome = "Ground rule double"; PlayCode = PlayCode.substr(3); }
-			else { Outcome = "Double"; PlayCode = PlayCode.substr(1); }
-		}
-		else if (PlayCode[0] == 'T') { Outcome = "Triple"; PlayCode = PlayCode.substr(1); }
-		else if (PlayCode[0] == 'B') { Outcome = "Bunt single"; PlayCode = PlayCode.substr(1); }
-		else if (isdigit(PlayCode[0])) { Location = PlayCode[0]; Fielder = GetFielder((int)PlayCode[0] - '0'); PlayCode = PlayCode.substr(1); }
-		else if (PlayCode.size() > 3 && PlayCode.substr(0, 4) == "FINT") { Outcome = "Fan interference"; PlayCode = PlayCode.substr(4); }
-		else if (PlayCode[0] == 'G' || PlayCode[0] == 'L' || PlayCode[0] == 'F' || PlayCode[0] == 'P') { Trajectory = GetTrajectory(PlayCode[0]); }
-		else if (PlayCode[0] == '/' || PlayCode[0] == '+' || PlayCode[0] == '-') { PlayCode = PlayCode.substr(1); }
-	}
+	PlayType = "Hit";
+	if (PlayCode[0] == 'S') { OutcomeType = "single"; }
+	else if (PlayCode[0] == 'D') { OutcomeType = "double"; }
+	else if (PlayCode[0] == 'T') { OutcomeType = "triple"; }
+	ReducePlayCode(1);
+	AddFielders();
 }
 
 
-void Play::ProcessHR()
+void Play::ProcessFieldOut()
 {
-	OutcomeType = "Homerun";
-
-	if (PlayCode.substr(0, 2) == "HR") { PlayCode = PlayCode.substr(2); }
-	else if (PlayCode[0] == 'H') { PlayCode = PlayCode.substr(1); }
-	if (isdigit(PlayCode[0])) { Fielders.push_back(PlayCode[0]); PlayCode = PlayCode.substr(1); }
-
-	while (PlayCode.size() > 0)
-	{
-		if (isalpha(PlayCode[0])) { Trajectory = GetTrajectory(PlayCode[0]); }
-		else if (isdigit(PlayCode[0])) { Location = GetLocation(); }
-		else { PlayCode = PlayCode.substr(1); }
-	}
+	PlayType = "FieldOut";
+	AddFielders();
 }
 
 
-void Play::ProcessOut()
+void Play::ProcessError(bool mainPlay)
 {
-	OutcomeType = "Out";
-	int OutCount = 0;
+	if (mainPlay) { PlayType = "error"; }
 
-	while(PlayCode != "")
+	Error PlayError;
+	PlayError.Fielder = "" + PlayCode[1];
+	ReducePlayCode(2);
+
+	if (PlayCode.size() > 2 && PlayCode.substr(0, 3) == "/TH") 
+	{ 
+		PlayError.ErrorType = "Throw"; 
+		ReducePlayCode(3);
+		if (isdigit(PlayCode[0]) || PlayCode[0] == 'H') { PlayError.BaseThrownTo = PlayCode[3]; ReducePlayCode(1); }
+	}
+	else { PlayError.ErrorType = "Catch"; }
+
+	Errors.push_back(PlayError);
+}
+
+
+void Play::ProcessSB(bool mainPlay)
+{
+	if (mainPlay) { PlayType = "stolenBase"; }
+
+	ReducePlayCode(3);
+}
+
+
+void Play::ProcessCS(bool mainPlay)
+{
+	if (mainPlay) { PlayType = "caughtStealing"; }
+
+	OutBase = PlayCode[2];
+	ReducePlayCode(4);
+	AddFielders();
+	ReducePlayCode(1);
+}
+
+
+void Play::ProcessPO(bool mainPlay)
+{
+	if (mainPlay) { PlayType = "pickoff"; }
+	ReducePlayCode(2);
+	if (PlayCode[0] == 'C') { ReducePlayCode(2); }
+
+	OutBase = PlayCode[0];
+	ReducePlayCode(2);
+	AddFielders();
+	ReducePlayCode(1);
+}
+
+
+void Play::AddFielders()
+{
+	bool fieldersComplete = false;
+	while (!fieldersComplete)
 	{
 		if (isdigit(PlayCode[0]))
 		{
 			Fielders.push_back(PlayCode[0]);
+			ReducePlayCode(1);
 		}
+		else if (PlayCode[0] == '!') { ReducePlayCode(1); }
 		else if (PlayCode[0] == '(')
 		{
-			RunnersOut.push_back(PlayCode[0]);
-			PlayCode = PlayCode.substr(1);
-			OutCount++;
+			OutBase == PlayCode[1];
+			ReducePlayCode(3);
 		}
-		else if (PlayCode[0] == '/')
-		{
-			PlayCode = PlayCode.substr(1);
-			if (PlayCode.size() > 2 && (PlayCode.substr(0, 3) == "GDP" || PlayCode.substr(0, 3) == "LDP"))
-			{ 
-				Outcome = "Double Play"; Trajectory = GetTrajectory(PlayCode[0]); PlayCode = PlayCode.substr(2);
-			}
-			else if (PlayCode.size() > 2 && (PlayCode.substr(0, 3) == "GTP" || PlayCode.substr(0, 3) == "LTP"))
-			{ 
-				Outcome = "Triple Play"; Trajectory = GetTrajectory(PlayCode[0]); PlayCode = PlayCode.substr(2);
-			}
-			else if (isdigit(PlayCode[0])) { Location = GetLocation(); }
-			else { Trajectory = GetTrajectory(PlayCode[0]); }
-			break;
-		}
-		if (PlayCode.size() > 0) { PlayCode = PlayCode.substr(1); }
-	}
-	if (Location == "") { Location = GetLocation(); }
-}
-
-
-void Play::ProcessK()
-{
-	OutcomeType = "Strikeout";
-	Outcome = "Strikeout";
-	PlayCode = PlayCode.substr(1);
-	if (PlayCode[0] == '+')
-	{
-		PlayCode = PlayCode.substr(1);
-		while (PlayCode.size() > 0)
-		{
-			if (PlayCode[0] == 'E')
-			{
-				std::string Fielder = GetFielder(PlayCode[1]);
-				Outcome += " plus error by the " + Fielder;
-				PlayCode = PlayCode.substr(2);
-			}
-			else if (PlayCode.substr(0, 2) == "SB")
-			{
-				Outcome += " but runner steals base";
-				PlayCode = PlayCode.substr(3);
-			}
-			else if (PlayCode.substr(0, 2) == "CS")
-			{
-				Outcome += " and runner is caught attempting to steal";
-				PlayCode = PlayCode.substr(2);
-				BaserunnerAdvance Pickoff = BaserunnerAdvance();
-				Pickoff.startingBase = PlayCode[0];
-				Pickoff.endingBase = PlayCode[0];
-				while (PlayCode[0] != ')')
-				{
-					if (isdigit(PlayCode[0])) { Fielders.push_back(PlayCode[0] - '0'); }
-					std::cout << PlayCode[0];
-					PlayCode = PlayCode.substr(1);
-				}
-				PlayCode = PlayCode.substr(1);
-			}
-			else if (PlayCode.substr(0, 2) == "PO")
-			{
-				Outcome += " and runner is picked off!";
-				BaserunnerAdvance Pickoff = BaserunnerAdvance();
-				Pickoff.startingBase = PlayCode[2];
-				Pickoff.endingBase = PlayCode[2];
-				PlayCode = PlayCode.substr(3);
-				while (PlayCode[0] != ')')
-				{
-					if (isdigit(PlayCode[0])) { Fielders.push_back(PlayCode[0] - '0'); }
-					std::cout << PlayCode[0];
-					PlayCode = PlayCode.substr(1);
-				}
-				PlayCode = PlayCode.substr(1);
-				Outcome += " and runner is picked off at " + Pickoff.startingBase + "!";
-			}
-			else if (PlayCode.substr(0, 2) == "PB") 
-			{
-				Outcome = "Passed ball on strike three!";
-				PlayCode = PlayCode.substr(2);
-			}
-			else if (PlayCode.substr(0, 2) == "WP")
-			{
-				Outcome = "Wild pitch on strike three!";
-				PlayCode = PlayCode.substr(2);
-			}
-			std::cout << PlayCode << " | " << RawPlay << "\n";
-			if (PlayCode.size() > 0) { PlayCode = PlayCode.substr(1); }
-		}
-	}
-	else if (PlayCode.substr(0, 2) == "23")
-	{
-		Fielders.push_back(2);
-		Fielders.push_back(3);
-		PlayCode = PlayCode.substr(2);
+		else if (PlayCode[0] == 'E') { ProcessError(false); }
+		else { fieldersComplete = true; }
 	}
 }
 
 
-void Play::ProcessE()
+void Play::GetTrajectory()
 {
-	OutcomeType = "Error";
-	Fielders.push_back(PlayCode[1]);
-	PlayCode = PlayCode.substr(2);
-	while (PlayCode.size() > 0)
+	switch (PlayCode[0]) 
 	{
-		if (PlayCode.size() == 1)
-		{
-			if (PlayCode[0] == 'G' || PlayCode[0] == 'F' || PlayCode[0] == 'L' || PlayCode[0] == 'P') { Trajectory = GetTrajectory(PlayCode[0]); }
-			else if (PlayCode[0] == '-') { PlayCode = PlayCode.substr(1); }
-		}
-		else
-		{
-			if (PlayCode[0] == '/') { PlayCode = PlayCode.substr(1); }
-			else if (PlayCode.substr(0, 2) == "TH") { ErrorType = "Throwing"; PlayCode = PlayCode.substr(2); }
-			else if (PlayCode.substr(0, 2) == "FO") { ErrorType = "Force"; PlayCode = PlayCode.substr(2); }
-			else if (PlayCode.substr(0, 2) == "BG") { ErrorType = "Bunt"; PlayCode = PlayCode.substr(2); }
-			else if (PlayCode.substr(0, 2) == "SH") { PlayCode = PlayCode.substr(2); }
-			else if (PlayCode[0] == 'G' || PlayCode[0] == 'S') { Trajectory = GetTrajectory(PlayCode[0]); }
-		}
-	}
-}
-
-
-void Play::ProcessW()
-{
-	OutcomeType = "Walk";
-	PlayCode = PlayCode.substr(1);
-	if (PlayCode.size() > 0)
-	{
-
-	}
-}
-
-void Play::ProcessSB()
-{
-	OutcomeType = "Stolen Base";
-	while (PlayCode.size() > 0)
-	{
-		if (PlayCode.substr(0, 2) == "SB")
-		{
-			PlayCode = PlayCode.substr(2);
-		}
-		else if(isdigit(PlayCode[0])) 
-		{  
-			BaserunnerAdvance StolenBase = BaserunnerAdvance();
-			StolenBase.endingBase = PlayCode[0];
-			StolenBase.startingBase = std::to_string(std::stoi(std::string(1, PlayCode[0])) - 1);
-			StolenBase.isSafe = true;
-			BaserunnerActivity.push_back(StolenBase);
-			PlayCode = PlayCode.substr(1);
-		}
-		else { PlayCode = PlayCode.substr(1); }
-	}
-}
-
-
-std::string Play::GetTrajectory(char BallCode)
-{
-	std::string Trajectory;
-
-	switch (BallCode) 
-	{
-		case 'G': Trajectory = "groundball";
-		case 'F': Trajectory = "flyball";
-		case 'P': Trajectory = "popup";
-		case 'L': Trajectory = "line drive";
-		case 'B': Trajectory = "bunt";
+		case 'G': Trajectory = "groundball"; break;
+		case 'F': Trajectory = "flyball"; break;
+		case 'P': Trajectory = "popup"; break;
+		case 'L': Trajectory = "line drive"; break;
 		default: Trajectory = "";
 	}
 	PlayCode = PlayCode.substr(1);
-	return Trajectory;
+	if (PlayCode[0] == '+' || PlayCode[0] == '-' || PlayCode[0] == '!') { PlayCode = PlayCode.substr(1); }
 }
 
 
@@ -350,11 +291,11 @@ std::string Play::GetFielder(int FielderCode)
 
 std::string Play::GetLocation()
 {
-	if (PlayCode.size() == 0) { PlayCode = Fielders[0]; }
 	std::string Zone = ""; // General area the ball is hit to, roughly corresponds to a fielding position
 	std::string Depth = ""; // Deep, Mid, Shallow
 	std::string Radius = ""; // Where "around the circle" it is - foul, down the line, up the middle, between zones
 
+	if (PlayCode.size() == 0) { Zone += Fielders[0]; }
 	while (PlayCode.size() > 0)
 	{
 		if (isdigit(PlayCode[0])) { Zone += PlayCode[0]; }
@@ -370,9 +311,14 @@ std::string Play::GetLocation()
 			case 'X': Radius += 'X';
 			}
 		}
-		PlayCode = PlayCode.substr(1);
+		ReducePlayCode(1);
 	}
 	return Radius + "-" + Depth + "-" + Zone;
+}
+
+void Play::ReducePlayCode(int numChars)
+{
+	PlayCode = PlayCode.substr(numChars);
 }
 
 

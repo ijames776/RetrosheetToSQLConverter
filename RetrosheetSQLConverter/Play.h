@@ -10,6 +10,14 @@ struct BaserunnerAdvance
 	std::string endingBase;
 	std::vector<char> Fielders;
 	std::vector<std::string> ExtraEvents;
+	std::string advanceType;
+};
+
+struct Error
+{
+	std::string ErrorType;
+	std::string Fielder;
+	int BaseThrownTo;
 };
 
 class Play
@@ -21,6 +29,10 @@ public:
 
 	int Inning;
 	bool isBottomInning;
+
+	std::string PlayType = "";
+
+	std::vector<Error> Errors;
 	std::string BatterID;
 	std::string RawPlay;
 	std::string Outcome;
@@ -28,7 +40,6 @@ public:
 	std::string Fielder;
 	std::string Location;
 	std::string Trajectory;
-	std::string ErrorType;
 
 	std::vector<int> Fielders;
 	std::vector<char> RunnersOut;
@@ -46,14 +57,23 @@ public:
 
 	void ProcessHit();
 	void ProcessHR();
-	void ProcessOut();
+	void ProcessFieldOut();
+	void ProcessFC();
 	void ProcessK();
-	void ProcessE();
+	void ProcessError(bool mainPlay);
 	void ProcessW();
-	void ProcessSB();
+	void ProcessSB(bool mainPlay);
+	void ProcessCS(bool mainPlay);
+	void ProcessPO(bool mainPlay);
 
-	std::string GetTrajectory(char BallCode);
+	void AddFielders();
+
+	void GetTrajectory();
 	std::string GetFielder(int FielderCode);
 	std::string GetLocation();
+	char OutBase;
+
+private:
+	void ReducePlayCode(int numChars);
 };
 

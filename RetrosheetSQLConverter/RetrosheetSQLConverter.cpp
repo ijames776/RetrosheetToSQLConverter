@@ -5,10 +5,18 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <filesystem>
 #include "Game.h"
+#include <mysql.h>
+#include "FDBConnect.h"
+
+namespace fs = std::filesystem;
 
 std::vector<std::vector<std::string>> Data;
 std::vector<Game> Games;
+
+std::vector<std::string> GetFilenames();
+void importPBPFiles();
 
 void HandleInfoRow(std::vector<std::string> Row, Game& Game);
 void HandleStartRow(std::vector<std::string> Row, Game& Game);
@@ -17,48 +25,19 @@ void HandleSubRow(std::vector<std::string> Row, Game& Game);
 
 std::vector<std::string> SplitString(std::string RawString);
 
+FDBConnect Retrosheet("localhost", "root", "protobis", "Retrosheet", 3306);
+
 int main()
 {
-    // Import File and separate into games
-    std::string filename = "2019ANA.EVA";
-    //std::cout << "Enter file name for import: ";
-    //std::cin >> filename;
+    //std::ofstream output;
+    //output.open("outputlog.txt");
+    importPBPFiles();
 
-    std::ifstream file;
-    file.open(filename);
-    if (file.is_open())
-    {
-        std::string line;
-
-        while (std::getline(file, line))
-        {
-            if (line.substr(0, 2) == "id") { Games.push_back(Game()); }
-            //else if (line.substr(0, 3) == "com") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
-            else if (line.substr(0, 3) == "sub") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
-            else if (line.substr(0, 4) == "info") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
-            else if (line.substr(0, 4) == "play") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
-            else if (line.substr(0, 4) == "data") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
-            else if (line.substr(0, 5) == "start") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
-        }
-    }
-
-    // Parse data per game
-    for (auto& Game : Games)
-    {
-        for (auto Row : Game.RawData)
-        {
-            if (Row[0] == "info") { HandleInfoRow(Row, Game); }
-            else if (Row[0] == "start") { HandleStartRow(Row, Game); }
-            else if (Row[0] == "play") { HandlePlayRow(Row, Game); }
-            else if (Row[0] == "sub") { HandleSubRow(Row, Game); }
-        }
-    }
-
-    //Print some game info for Debug
     for (int i = 0; i < Games.size(); i++)
     {
         if (i == i)
         {
+            //output << "Game: " << i + 1 << ": " << Games[i].Teams[1].Abbreviation << " @ " << Games[i].Teams[0].Abbreviation << " on " << Games[i].GameDate << "\n";
             //std::cout << "Game: " << i + 1 << ": " << Games[i].Teams[1].Abbreviation << " @ " << Games[i].Teams[0].Abbreviation << " on " << Games[i].GameDate << "\n";
             //std::cout << "WP: " << Games[i].WinningPitcherID << "\n";
             //std::cout << "LP: " << Games[i].LosingPitcherID << "\n";
@@ -79,7 +58,7 @@ int main()
                 //if (PlayText != "")
                 if (Play.PlayCode != "")
                 {
-                    std::cout << i+1 << ": " << Games[i].Teams[Play.isBottomInning].Roster[Play.BatterID].LastName << ": " << Play.PlayCode << " | " << Play.RawPlay << "\n";
+                    std::cout << i + 1 << ": " << Games[i].Teams[Play.isBottomInning].Roster[Play.BatterID].LastName << ": " << Play.PlayCode << " | " << Play.RawPlay << "\n";
                 }
             }
             //for (auto Line : Games[i].RawData)
@@ -96,11 +75,59 @@ int main()
             //std::cout << "\n";
         }
     }
-
-    file.close();
 }
 
 // Load retrosheet file from folder
+
+std::vector<std::string> GetFilenames()
+{
+    std::vector<std::string> filenames;
+
+    std::string path = "retrosheet";
+    for (const auto& entry : fs::directory_iterator(path))
+    {
+        std::string file = entry.path().string();
+        int directorymarker = file.find('\\');
+        file = file.substr(directorymarker + 1);
+
+        int extensionmarker = file.find('.');
+        std::string extension = file.substr(extensionmarker + 1);;
+
+        if (extension == "EVA" || extension == "EVN")
+        {
+            filenames.push_back(file);
+        }
+    }
+    return filenames;
+}
+
+void importPBPFiles()
+{
+    std::vector<std::string> Filenames = GetFilenames();
+
+    for (auto filename : Filenames)
+    {
+        std::cout << filename << "\n";
+        std::ifstream file;
+        file.open("retrosheet\\" + filename);
+        if (file.is_open())
+        {
+            std::string line;
+
+            while (std::getline(file, line))
+            {
+                if (line.substr(0, 2) == "id") { Games.push_back(Game()); }
+                //else if (line.substr(0, 3) == "com") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
+                else if (line.substr(0, 3) == "sub") { HandleSubRow(SplitString(line), Games[Games.size() - 1]); }
+                else if (line.substr(0, 4) == "info") { HandleInfoRow(SplitString(line), Games[Games.size() - 1]); }
+                else if (line.substr(0, 4) == "play") { HandlePlayRow(SplitString(line), Games[Games.size() - 1]); }
+                //else if (line.substr(0, 4) == "data") { Games[Games.size() - 1].RawData.push_back(SplitString(line)); }
+                else if (line.substr(0, 5) == "start") { HandleStartRow(SplitString(line), Games[Games.size() - 1]); }
+            }
+        }
+        file.close();
+    }
+}
 
 // Populates needed info from info rows into the game object
 void HandleInfoRow(std::vector<std::string> Row, Game& Game)
@@ -119,6 +146,7 @@ void HandleInfoRow(std::vector<std::string> Row, Game& Game)
 void HandleStartRow(std::vector<std::string> Row, Game& Game)
 {
     Game.Teams[std::stoi(Row[3])].Roster[Row[1]] = (Player(Row));
+    //std::cout << Retrosheet.bWasUpdateSuccessful("INSERT INTO playerGameStats(playerID, gameID) VALUES('" + Row[1] + "', '" + Game.GameDate +"')") << "\n";
 }
 
 
